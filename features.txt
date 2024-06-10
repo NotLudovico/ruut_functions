@@ -1,0 +1,2 @@
+- Fix parsing with starting negative number
+- Allow for simp of the type Sin/Cos^2 -> Tan/Cos
