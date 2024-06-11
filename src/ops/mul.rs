@@ -12,6 +12,9 @@ impl Mul for Func {
         if rhs == 1 {
             return self;
         }
+        if self == 0 || rhs == 0 {
+            return Func::Num(0);
+        }
 
         let mut func = match (&self, &rhs) {
             (Func::Num(mul1), Func::Num(mul2)) => Func::Num(mul1 * mul2),

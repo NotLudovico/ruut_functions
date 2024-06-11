@@ -66,3 +66,15 @@ fn func_order(func: &Func) -> u32 {
         },
     }
 }
+
+impl std::iter::Sum for Func {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Func::Num(0), |acc, func| acc + func)
+    }
+}
+
+impl std::iter::Product for Func {
+    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Func::Num(1), |acc, func| acc * func)
+    }
+}

@@ -1,12 +1,13 @@
 use parser::{builder::build, to_rpn, ParsingError};
 use simp::simp_node;
 
+mod derivation;
 pub mod ops;
 pub mod parser;
 mod simp;
 mod traits;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct Ctx<'a>(Vec<&'a str>);
 impl<'a> Ctx<'a> {
     pub fn new(symbols: &'a [&str]) -> Self {
@@ -45,7 +46,7 @@ pub struct FND<'a> {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Func {
+pub(crate) enum Func {
     Var(char),
     E,
     PI,
@@ -58,7 +59,7 @@ pub enum Func {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum FType {
+pub(crate) enum FType {
     Sin,
     Cos,
     Tan,

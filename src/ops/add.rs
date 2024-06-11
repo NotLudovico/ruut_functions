@@ -61,3 +61,19 @@ impl Sub for Func {
         self + -1 * rhs
     }
 }
+
+impl Sub<i32> for Func {
+    type Output = Func;
+
+    fn sub(self, rhs: i32) -> Self::Output {
+        self - Func::Num(rhs)
+    }
+}
+
+impl Sub<Func> for i32 {
+    type Output = Func;
+
+    fn sub(self, rhs: Func) -> Self::Output {
+        Func::Num(self) - rhs
+    }
+}

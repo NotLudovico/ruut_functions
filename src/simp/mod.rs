@@ -43,7 +43,7 @@ pub(crate) fn simp_node(func: &mut Func) {
                 if mul_vec.len() > 1 {
                     if let Func::Num(val) = mul_vec[0] {
                         if val < 0 {
-                            mul_vec[0] = Func::Num(-1 * val);
+                            mul_vec[0] = Func::Num(-val);
                             simp_node(arg);
                         }
                     }
@@ -120,17 +120,14 @@ fn simp_add(add: &mut Vec<Func>) -> bool {
                 *second = f;
                 firsts[i] = Func::Num(0);
                 worked = true;
-            } else {
-                if let Some(a) = is_rational(&firsts[i]) {
-                    if let Some(b) = is_rational(second) {
-                        let num = a.0 * b.1 + b.0 * a.1;
-                        let den = a.1 * b.1;
-                        let gcd = gcd(num as u32, den as u32) as i32;
-                        *second =
-                            Func::Mul(vec![Func::Num(num / gcd), Func::Num(den / gcd).powi(-1)]);
-                        firsts[i] = Func::Num(0);
-                        worked = true;
-                    }
+            } else if let Some(a) = is_rational(&firsts[i]) {
+                if let Some(b) = is_rational(second) {
+                    let num = a.0 * b.1 + b.0 * a.1;
+                    let den = a.1 * b.1;
+                    let gcd = gcd(num as u32, den as u32) as i32;
+                    *second = Func::Mul(vec![Func::Num(num / gcd), Func::Num(den / gcd).powi(-1)]);
+                    firsts[i] = Func::Num(0);
+                    worked = true;
                 }
             }
         }
