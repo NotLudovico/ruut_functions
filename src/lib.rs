@@ -2,6 +2,7 @@ use parser::{builder::build, to_rpn, ParsingError};
 use simp::simp_node;
 
 mod derivation;
+mod display;
 pub mod ops;
 pub mod parser;
 mod simp;
@@ -38,6 +39,20 @@ pub struct F2D<'a> {
 pub struct F3D<'a> {
     func: Func,
     ctx: Ctx<'a>,
+}
+
+impl<'a> F3D<'a> {
+    pub fn new(input: &str) -> Result<Self, ParsingError> {
+        let mut func = build(to_rpn(input, &['x', 'y', 'z'])?);
+        simp_node(&mut func);
+        Ok(F3D {
+            func,
+            ctx: Ctx::new(&[]),
+        })
+    }
+    pub fn latex(&self) -> String {
+        self.func.latex()
+    }
 }
 
 pub struct FND<'a> {

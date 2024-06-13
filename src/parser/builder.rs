@@ -12,9 +12,8 @@ pub(crate) fn build(input: VecDeque<Grammar>) -> Func {
             Grammar::Var(char) => stack.push(Func::Var(char)),
             Grammar::Add => {
                 let second = stack.pop().unwrap();
-                let first = stack.pop().unwrap();
 
-                stack.push(second + first);
+                *stack.last_mut().unwrap() += second;
             }
             Grammar::Sub => {
                 let second = stack.pop().unwrap();
@@ -27,9 +26,9 @@ pub(crate) fn build(input: VecDeque<Grammar>) -> Func {
                 }
             }
             Grammar::Mul => {
-                let first = stack.pop().unwrap();
                 let second = stack.pop().unwrap();
-                stack.push(first * second);
+
+                *stack.last_mut().unwrap() *= second;
             }
             Grammar::Div => {
                 let first = stack.pop().unwrap();
@@ -47,7 +46,14 @@ pub(crate) fn build(input: VecDeque<Grammar>) -> Func {
                 let arg = stack.pop().unwrap();
                 stack.push(Func::S(kind, Box::new(arg)));
             }
-            _ => (),
+            Grammar::Sqrt => {
+                let arg = stack.pop().unwrap();
+                stack.push(arg.pow(Func::Mul(vec![
+                    Func::Num(1),
+                    Func::Pow(Box::new(Func::Num(2)), Box::new(Func::Num(-1))),
+                ])));
+            }
+            Grammar::LPar => panic!("Found left par in RPN representation"),
         }
     }
 
@@ -60,11 +66,8 @@ fn test_builder() {
     use crate::FType;
 
     assert_eq!(
-        build(to_rpn("cos(-x)", &['x']).unwrap()),
-        Func::S(
-            FType::Cos,
-            Box::new(Func::Mul(vec![Func::Num(-1), Func::Var('x')]))
-        )
+        build(to_rpn("cos(-x)+sqrt(x)+(x^(-3))^2", &['x']).unwrap()),
+        build(to_rpn("cos(-x)+x^(1/2)+x^(-6)", &['x']).unwrap()),
     );
 
     let input = to_rpn("(sin(3+7)/8)-7^2", &['x']).unwrap();

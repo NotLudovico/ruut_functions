@@ -17,6 +17,7 @@ pub(crate) enum Grammar {
     LPar,
     Num(i32),
     S(FType),
+    Sqrt,
 }
 pub(crate) fn to_rpn(input: &str, vars: &[char]) -> Result<VecDeque<Grammar>, ParsingError> {
     let mut curr = String::new();
@@ -27,6 +28,9 @@ pub(crate) fn to_rpn(input: &str, vars: &[char]) -> Result<VecDeque<Grammar>, Pa
     let mut prev = None;
 
     while let Some(char) = chars.next() {
+        if char == ' ' {
+            continue;
+        }
         curr.push(char);
         let next = chars.peek();
 
@@ -34,15 +38,7 @@ pub(crate) fn to_rpn(input: &str, vars: &[char]) -> Result<VecDeque<Grammar>, Pa
             if let Some(char) = next {
                 if !char.is_ascii_digit() {
                     output_queue.push_back(Grammar::Num(curr.parse::<i32>().unwrap()));
-                    if !matches!(char, '+' | '-' | '*' | '/' | '^' | ')') {
-                        let _ = match_operator(
-                            '*',
-                            &None,
-                            &None,
-                            &mut operator_stack,
-                            &mut output_queue,
-                        );
-                    }
+                    implicit_mul(&next, &mut operator_stack, &mut output_queue);
                     curr.clear();
                 }
             } else {
@@ -53,16 +49,12 @@ pub(crate) fn to_rpn(input: &str, vars: &[char]) -> Result<VecDeque<Grammar>, Pa
             curr.clear();
         } else if curr == "pi" {
             output_queue.push_back(Grammar::PI);
+            implicit_mul(&next, &mut operator_stack, &mut output_queue);
             curr.clear();
         } else if curr.len() == 1 && vars.contains(&curr.chars().next().unwrap()) {
             output_queue.push_back(Grammar::Var(char));
             curr.clear();
-            if let Some(n) = next {
-                if *n == '(' {
-                    let _ =
-                        match_operator('*', &None, &None, &mut operator_stack, &mut output_queue);
-                }
-            }
+            implicit_mul(&next, &mut operator_stack, &mut output_queue);
         } else if match_operator(char, &next, &prev, &mut operator_stack, &mut output_queue)?
             || match_func(&curr, &next, &mut operator_stack)?
         {
@@ -88,6 +80,18 @@ pub enum ParsingError {
     UnknownFunction(String),
 }
 
+fn implicit_mul(
+    next: &Option<&char>,
+    operator_stack: &mut Vec<Grammar>,
+    output_queue: &mut VecDeque<Grammar>,
+) {
+    if let Some(n) = next {
+        if !matches!(n, '+' | '-' | '/' | '*' | '^' | ' ' | ')') {
+            let _ = match_operator('*', &None, &None, operator_stack, output_queue);
+        }
+    }
+}
+
 fn match_operator(
     curr: char,
     next: &Option<&char>,
@@ -95,81 +99,74 @@ fn match_operator(
     operator_stack: &mut Vec<Grammar>,
     output_queue: &mut VecDeque<Grammar>,
 ) -> Result<bool, ParsingError> {
-    if matches!(curr, '+' | '-' | '/' | '*' | '^' | '(' | ')') {
-        let o1 = match curr {
-            '+' => Grammar::Add,
-            '-' => {
-                if let Some(p) = prev {
-                    if *p == '(' {
-                        output_queue.push_back(Grammar::Num(-1));
-                        Grammar::Mul
-                    } else {
-                        Grammar::Sub
-                    }
-                } else {
+    let o1 = match curr {
+        '+' => Grammar::Add,
+        '-' => {
+            if let Some(p) = prev {
+                if *p == '(' {
                     output_queue.push_back(Grammar::Num(-1));
                     Grammar::Mul
-                }
-            }
-            '*' => Grammar::Mul,
-            '/' => Grammar::Div,
-            '^' => Grammar::Pow,
-            '(' => {
-                operator_stack.push(Grammar::LPar);
-                return Ok(true);
-            }
-            ')' => {
-                while !operator_stack.is_empty() {
-                    match operator_stack.last() {
-                        Some(o2) => {
-                            if let Grammar::LPar = o2 {
-                                break;
-                            }
-                            output_queue.push_back(operator_stack.pop().unwrap());
-                        }
-                        _ => break,
-                    }
-                }
-
-                if let Some(Grammar::LPar) = operator_stack.last() {
-                    operator_stack.pop();
                 } else {
-                    return Err(ParsingError::NotMatchingPar);
+                    Grammar::Sub
                 }
-                if let Some(n) = next {
-                    if !matches!(n, '+' | '-' | '/' | '*' | '^') {
-                        let _ = match_operator('*', &None, &None, operator_stack, output_queue);
-                    }
-                }
-                return Ok(true);
-            }
-
-            _ => unreachable!(),
-        };
-
-        while !operator_stack.is_empty() {
-            match operator_stack.last() {
-                Some(o2) => {
-                    if let Grammar::LPar = o2 {
-                        break;
-                    }
-
-                    if op_prec(o2).0 > op_prec(&o1).0
-                        || (op_prec(o2).0 == op_prec(&o1).0 && op_prec(&o1).1)
-                    {
-                        output_queue.push_back(operator_stack.pop().unwrap());
-                    } else {
-                        break;
-                    }
-                }
-                _ => break,
+            } else {
+                output_queue.push_back(Grammar::Num(-1));
+                Grammar::Mul
             }
         }
-        operator_stack.push(o1);
+        '*' => Grammar::Mul,
+        '/' => Grammar::Div,
+        '^' => Grammar::Pow,
+        '(' => {
+            operator_stack.push(Grammar::LPar);
+            return Ok(true);
+        }
+        ')' => {
+            while !operator_stack.is_empty() {
+                match operator_stack.last() {
+                    Some(o2) => {
+                        if let Grammar::LPar = o2 {
+                            break;
+                        }
+                        output_queue.push_back(operator_stack.pop().unwrap());
+                    }
+                    _ => break,
+                }
+            }
 
-        return Ok(true);
+            if let Some(Grammar::LPar) = operator_stack.last() {
+                operator_stack.pop();
+            } else {
+                return Err(ParsingError::NotMatchingPar);
+            }
+            implicit_mul(next, operator_stack, output_queue);
+            return Ok(true);
+        }
+
+        _ => return Ok(false),
+    };
+
+    while !operator_stack.is_empty() {
+        match operator_stack.last() {
+            Some(o2) => {
+                if let Grammar::LPar = o2 {
+                    break;
+                }
+
+                if op_prec(o2).0 > op_prec(&o1).0
+                    || (op_prec(o2).0 == op_prec(&o1).0 && op_prec(&o1).1)
+                {
+                    output_queue.push_back(operator_stack.pop().unwrap());
+                } else {
+                    break;
+                }
+            }
+            _ => break,
+        }
     }
-    Ok(false)
+    operator_stack.push(o1);
+
+    return Ok(true);
 }
 
 fn match_func(
@@ -200,6 +197,7 @@ fn match_func(
                 "atanh" => Grammar::S(FType::ATanh),
                 "abs" => Grammar::S(FType::Abs),
                 "ln" | "log" => Grammar::S(FType::Ln),
+                "sqrt" => Grammar::Sqrt,
                 _ => return Err(ParsingError::UnknownFunction(curr.to_string())),
             });
             return Ok(true);
@@ -232,13 +230,15 @@ fn test_to_rpn() {
             Grammar::Var('x'),
             Grammar::Mul,
             Grammar::S(FType::Cos),
-            Grammar::Div
+            Grammar::Div,
         ])
     );
     assert_eq!(
-        to_rpn("13/(15+7^3)*sinh(69)+x+e^x+pi", &['x']).unwrap(),
+        to_rpn("-13/(15+7^3)*sinh(69)+x+e^x+pi", &['x']).unwrap(),
         VecDeque::from([
+            Grammar::Num(-1),
             Grammar::Num(13),
+            Grammar::Mul,
             Grammar::Num(15),
             Grammar::Num(7),
             Grammar::Num(3),
@@ -261,6 +261,10 @@ fn test_to_rpn() {
 
     assert_eq!(
         to_rpn("3*(2-))7", &['x']).unwrap_err(),
+        ParsingError::NotMatchingPar
+    );
+    assert_eq!(
+        to_rpn("3*2((7", &['x']).unwrap_err(),
         ParsingError::NotMatchingPar
     );
     assert_eq!(

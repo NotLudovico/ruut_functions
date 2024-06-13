@@ -39,7 +39,7 @@ impl AddAssign for Func {
             (Func::Add(add), other) => {
                 add.push(other.clone());
             }
-            (_, _) => *self = self.clone() + rhs,
+            (_, _) => *self = Func::Add(vec![self.clone(), rhs]),
         };
 
         simp_node(self)

@@ -9,6 +9,15 @@ impl PartialEq<i32> for Func {
         false
     }
 }
+impl PartialOrd<i32> for Func {
+    fn partial_cmp(&self, other: &i32) -> Option<std::cmp::Ordering> {
+        if let Func::Num(val) = self {
+            Some(val.cmp(&other))
+        } else {
+            None
+        }
+    }
+}
 
 impl Eq for Func {}
 impl PartialOrd for Func {
@@ -18,6 +27,18 @@ impl PartialOrd for Func {
 }
 impl Ord for Func {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if let (Func::Pow(base1, exp1), Func::Pow(base2, exp2)) = (self, other) {
+            if let Func::Num(e1) = **exp1 {
+                if let Func::Num(e2) = **exp2 {
+                    if e1 != e2 {
+                        return e2.cmp(&e1);
+                    } else {
+                        return base1.cmp(&base2);
+                    }
+                }
+            }
+        }
+
         func_order(self).cmp(&func_order(other))
     }
 }
@@ -31,17 +52,6 @@ fn func_order(func: &Func) -> u32 {
         Func::Var(char) => char.to_ascii_lowercase() as u32,
         Func::Mul(_) => 123,
         Func::Add(_) => 124,
-        Func::Pow(_, exp) => {
-            if let Func::Num(val) = **exp {
-                if val < 0 {
-                    146
-                } else {
-                    125
-                }
-            } else {
-                125
-            }
-        }
         Func::S(kind, _) => match kind {
             FType::Abs => 126,
             FType::Ln => 127,
@@ -64,6 +74,17 @@ fn func_order(func: &Func) -> u32 {
             FType::ACosh => 144,
             FType::ATanh => 145,
         },
+        Func::Pow(_, exp) => {
+            if let Func::Num(val) = **exp {
+                if val < 0 {
+                    147
+                } else {
+                    146
+                }
+            } else {
+                146
+            }
+        }
     }
 }
 

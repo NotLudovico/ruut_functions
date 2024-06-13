@@ -1,4 +1,4 @@
-use crate::{FType, Func, F1D, F2D, F3D};
+use crate::{simp::simp_node, FType, Func, F1D, F2D, F3D};
 
 impl<'a> F1D<'a> {
     pub fn derive(&self, order: usize) -> Self {
@@ -156,6 +156,6 @@ impl Func {
 fn test_derive() {
     assert_eq!(
         F1D::new("x+ln(x)+x^2+sin(2x)").unwrap().derive(1),
-        F1D::new("1+1/x+2x+2cos(2x)").unwrap()
+        F1D::new("1+1/x+2cos(2x)+2x").unwrap()
     )
 }

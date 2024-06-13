@@ -65,12 +65,8 @@ fn simp_add(add: &mut Vec<Func>) -> bool {
 
         for second in others.iter_mut() {
             let new_func = match (&firsts[i], &*second) {
-                (Func::Num(add1), Func::Num(add2)) => {
-                    if *add1 != 0 && *add2 != 0 {
-                        Some(Func::Num(add1 + add2))
-                    } else {
-                        None
-                    }
+                (Func::Num(add1), Func::Num(add2)) if *add1 != 0 && *add2 != 0 => {
+                    Some(Func::Num(add1 + add2))
                 }
                 (Func::S(FType::Ln, arg1), Func::S(FType::Ln, arg2)) => {
                     Some(Func::S(FType::Ln, Box::new(*arg1.clone() * *arg2.clone())))
@@ -275,12 +271,17 @@ fn unwrap_par(func: &mut Func) {
 fn test_simp() {
     use crate::F1D;
     assert_eq!(
-        F1D::new("sin(x)/cos(x)+1/2-7+sin(x)/cos(2x)").unwrap(),
-        F1D::new("tan(x)-13/2+sin(x)/cos(2x)").unwrap()
+        F1D::new("sin(x)/cos(x)+1/2-7+sin(x)/cos(2x)+(x^2)^3+ln(e^2)").unwrap(),
+        F1D::new("tan(x)-13/2+sin(x)/cos(2x)+x^6+2").unwrap()
     );
 
     assert_eq!(
         F1D::new("x+sin(x)/cos(-x)+ln(4x)+ln(7)+sin(x^2)^2+tan(14x)cos(14x)+3/2-1/7+cos(x)cos(x)+sin(x)sin(x)+2/28-10/7+cot(x)^2").unwrap(),
     F1D::new("x+tan(x)+ln(28x)+sin(x^2)^2+sin(14x)+csc(x)^2").unwrap()
+    );
+
+    assert_eq!(
+        F1D::new("cos(x)^2+sin(x)^2+tan(x)^2").unwrap(),
+        F1D::new("sec(x)^2").unwrap()
     );
 }

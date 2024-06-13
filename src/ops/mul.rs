@@ -1,4 +1,4 @@
-use std::ops::Mul;
+use std::ops::{Mul, MulAssign};
 
 use crate::{simp::simp_node, Func};
 
@@ -26,6 +26,32 @@ impl Mul for Func {
         };
         simp_node(&mut func);
         func
+    }
+}
+
+impl MulAssign for Func {
+    fn mul_assign(&mut self, rhs: Self) {
+        match (&mut *self, &rhs) {
+            (Func::Num(val), Func::Num(val2)) => *val *= val2,
+            (Func::Mul(mul_lhs), Func::Mul(mul_rhs)) => {
+                for el in mul_rhs {
+                    mul_lhs.push(el.clone())
+                }
+            }
+            (Func::Mul(mul), _) => {
+                mul.push(rhs);
+            }
+            (_, _) => {
+                if *self == 0 {
+                    return;
+                } else if *self == 1 {
+                    *self = rhs.clone();
+                }
+                *self = Func::Mul(vec![self.clone(), rhs]);
+            }
+        }
+
+        simp_node(self)
     }
 }
 impl Mul<Func> for i32 {
