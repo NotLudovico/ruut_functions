@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Sub};
 
-use crate::{simp::simp_node, Func};
+use crate::{simp::simp_node, Func, F1D, F2D, F3D};
 
 impl Add for Func {
     type Output = Self;

@@ -41,7 +41,7 @@ impl F2D {
     /// ```
     /// use ruut_functions::{f2d, F2D};
     ///
-    /// let mut f = f2d!("x+y[a]^2");
+    /// let mut f = f2d!("x+y[a]^2"); // Default value of param in 0
     /// f.set_par("a", 6.9);
     /// assert!(f.eval(4.20, 1.0) - 51.81 < 0.0001);
     /// f.set_par("a", 1.2);
@@ -56,7 +56,7 @@ impl F3D {
     /// ```
     /// use ruut_functions::{f3d, F3D};
     ///
-    /// let mut f = f3d!("x+y[a]^2+z");
+    /// let mut f = f3d!("x+y[a]^2+z"); // Default value of param in 0
     /// f.set_par("a", 6.9);
     /// assert!(f.eval(4.20, 1.0,7.0) - 58.81 < 0.0001);
     /// f.set_par("a", 1.2);

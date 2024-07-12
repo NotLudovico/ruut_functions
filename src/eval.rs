@@ -91,17 +91,9 @@ pub fn eval_vec_f3d(vec: &[F3D], x: f64, y: f64, z: f64) -> Vec<f64> {
 }
 #[test]
 fn test_eval() {
-    assert_eq!(
-        F1D::new("(2/3)-(1/3)x").unwrap().eval(1.),
-        0.3333333333333333
-    );
-
-    assert_eq!(
-        F2D::new("xy+sin(x)").unwrap().eval(3., 5.),
-        15.141120008059866
-    );
-    assert_eq!(
-        F3D::new("xyz*e*pi+1-x").unwrap().eval(3., 5., 7.),
-        894.6720933807245
-    );
+    use crate::{f1d, f2d, f3d};
+    assert_eq!(f1d!("(2/3)-(1/3)x").eval(1.), 0.3333333333333333);
+    assert_eq!(f1d!("1/x").eval(0.), f64::INFINITY);
+    assert_eq!(f2d!("xy+sin(x)").eval(3., 5.), 15.141120008059866);
+    assert_eq!(f3d!("xyz*e*pi+1-x").eval(3., 5., 7.), 894.6720933807245);
 }
