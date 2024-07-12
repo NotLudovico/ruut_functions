@@ -1,4 +1,4 @@
-use std::ops::Div;
+use std::ops::{Div, DivAssign};
 
 use crate::{simp::simp_node, Func};
 
@@ -45,6 +45,12 @@ impl Div for Func {
         };
         simp_node(&mut func);
         func
+    }
+}
+
+impl DivAssign for Func {
+    fn div_assign(&mut self, rhs: Self) {
+        *self *= rhs.powi(-1)
     }
 }
 

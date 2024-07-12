@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use crate::{simp::simp_node, Func, F1D, F2D, F3D};
 
@@ -43,6 +43,11 @@ impl AddAssign for Func {
         };
 
         simp_node(self)
+    }
+}
+impl SubAssign for Func {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self += -1 * rhs;
     }
 }
 
