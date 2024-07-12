@@ -1,23 +1,45 @@
-use crate::{simp::simp_node, FType, Func, F1D, F2D, F3D};
+use crate::{FType, Func, F1D, F2D, F3D, FND};
 
-impl<'a> F1D<'a> {
+impl F1D {
+    /// Computes the nth-derivative
+    /// ```
+    /// use ruut_functions::{f1d, F1D};
+    ///
+    /// let f = f1d!("x^log(x)");
+    /// let df = f.derive(1);
+    /// assert_eq!(df, f1d!("2ln(x)x^ln(x)/x"));
+    /// assert_eq!(df.derive(1), f.derive(2));
+    /// ```
     pub fn derive(&self, order: usize) -> Self {
-        F1D {
-            func: self.func.derive_nth('x', order),
-            ctx: self.ctx.clone(),
-        }
+        F1D(self.0.derive_nth('x', order))
     }
 }
-impl<'a> F2D<'a> {
+impl F2D {
+    /// Computes the nth-derivative
+    /// ```
+    /// use ruut_functions::{f2d,F2D};
+    /// assert_eq!(f2d!("x+y^2").derive('y', 2), f2d!("2"));
+    /// ```
     pub fn derive(&self, var: char, order: usize) -> Self {
-        F2D {
-            func: self.func.derive_nth(var, order),
-            ctx: self.ctx.clone(),
-        }
+        F2D(self.0.derive_nth(var, order))
     }
+    /// Computes the gradient
+    /// ```
+    /// use ruut_functions::{f2d, F2D};
+    /// assert_eq!(f2d!("x+y^2").gradient(), vec![f2d!("1"), f2d!("2y")]);
+    /// ```
     pub fn gradient(&self) -> Vec<Self> {
         vec![self.derive('x', 1), self.derive('y', 1)]
     }
+
+    /// Computes the hessian matrix
+    /// ```
+    /// use ruut_functions::{f2d, F2D};
+    /// let f = f2d!("x^3+y^2");
+    /// let hessian = f.hessian();
+    /// assert_eq!(hessian, vec![vec![f2d!("6x"), f2d!("0")],
+    ///                          vec![f2d!("0"), f2d!("2")]]);
+    /// ```
     pub fn hessian(&self) -> Vec<Vec<Self>> {
         vec![
             vec![self.derive('x', 2), self.derive('x', 1).derive('y', 1)],
@@ -26,13 +48,20 @@ impl<'a> F2D<'a> {
     }
 }
 
-impl<'a> F3D<'a> {
+impl F3D {
+    /// Computes the nth-derivative
+    /// ```
+    /// use ruut_functions::{f3d, F3D};
+    /// assert_eq!(f3d!("x+zy^2").derive('y', 2), f3d!("2z"));
+    /// ```
     pub fn derive(&self, var: char, order: usize) -> Self {
-        F3D {
-            func: self.func.derive_nth(var, order),
-            ctx: self.ctx.clone(),
-        }
+        F3D(self.0.derive_nth(var, order))
     }
+    /// Computes the gradient
+    /// ```
+    /// use ruut_functions::{f3d, F3D};
+    /// assert_eq!(f3d!("x+zy^2").gradient(), vec![f3d!("1"), f3d!("2yz"), f3d!("y^2")]);
+    /// ```
     pub fn gradient(&self) -> Vec<Self> {
         vec![
             self.derive('x', 1),
@@ -40,26 +69,65 @@ impl<'a> F3D<'a> {
             self.derive('z', 1),
         ]
     }
+    /// Computes the hessian
+    /// ```
+    /// use ruut_functions::{f3d, F3D};
+    /// assert_eq!(f3d!("x^3+zy^2").hessian(), vec![vec![f3d!("6x"), f3d!("0"), f3d!("0")],
+    ///                                             vec![f3d!("0"), f3d!("2z"), f3d!("2y")],
+    ///                                             vec![f3d!("0"), f3d!("2y"), f3d!("0")]]);
+    /// ```
     pub fn hessian(&self) -> Vec<Vec<Self>> {
+        let dx = self.derive('x', 1);
+        let dy = self.derive('y', 1);
+        let dz = self.derive('z', 1);
         vec![
-            vec![
-                self.derive('x', 2),
-                self.derive('x', 1).derive('y', 1),
-                self.derive('x', 1).derive('z', 1),
-            ],
-            vec![
-                self.derive('y', 1).derive('x', 1),
-                self.derive('y', 2),
-                self.derive('y', 1).derive('z', 1),
-            ],
-            vec![
-                self.derive('z', 1).derive('x', 1),
-                self.derive('z', 1).derive('y', 1),
-                self.derive('z', 2),
-            ],
+            vec![dx.derive('x', 1), dx.derive('y', 1), dx.derive('z', 1)],
+            vec![dy.derive('x', 1), dy.derive('y', 1), dy.derive('z', 1)],
+            vec![dz.derive('x', 1), dz.derive('y', 1), dz.derive('z', 1)],
         ]
     }
 }
+
+impl FND {
+    /// Computes the nth-derivative wrt a variable
+    pub fn derive(&self, var: char, order: usize) -> Self {
+        FND {
+            vars: self.vars.clone(),
+            func: self.func.derive_nth(var, order),
+        }
+    }
+
+    /// Computes the gradient
+    pub fn gradient(&self) -> Vec<Self> {
+        let mut result = Vec::with_capacity(self.vars.len());
+        for var in &self.vars {
+            result.push(self.derive(*var, 1));
+        }
+        result
+    }
+    /// Computes the hessian
+    pub fn hessian(&self) -> Vec<Vec<Self>> {
+        let mut result = Vec::new();
+
+        // first derivative
+        let mut first_deriv = Vec::with_capacity(self.vars.len());
+        for var in &self.vars {
+            first_deriv.push(self.derive(*var, 1));
+        }
+
+        for el in first_deriv {
+            let mut gradient = Vec::with_capacity(self.vars.len());
+
+            for var in &self.vars {
+                gradient.push(el.derive(*var, 1))
+            }
+            result.push(gradient);
+        }
+
+        result
+    }
+}
+
 impl Func {
     fn derive_nth(&self, var: char, order: usize) -> Self {
         let mut result = self.clone();
@@ -69,7 +137,7 @@ impl Func {
         result
     }
     fn derive(&self, var: char) -> Self {
-        match self {
+        let res = match self {
             Self::Var(char) => {
                 if *char == var {
                     Self::Num(1)
@@ -77,24 +145,22 @@ impl Func {
                     Self::Num(0)
                 }
             }
-            Self::Num(_) | Self::Param(_) => Self::Num(0),
+            Self::Num(_) | Self::Param(..) => Self::Num(0),
             Self::E | Self::PI => Self::Num(0),
             Self::Add(add) => add.iter().map(|term| term.derive(var)).sum::<Self>(),
             Self::Mul(mul) => {
-                let mut deriv_multipliers = Func::Num(0);
-                let mut multipliers = Func::Num(1);
+                let mut result = Func::Num(0);
                 for (i, term) in mul.iter().enumerate() {
-                    multipliers = multipliers * term.clone();
-                    let mut prods = term.derive(var);
+                    let mut multipliers = term.derive(var);
                     for (j, other) in mul.iter().enumerate() {
                         if i != j {
-                            prods = prods * other.clone()
+                            multipliers *= other.clone()
                         }
                     }
-                    deriv_multipliers += prods;
+                    result += multipliers;
                 }
 
-                deriv_multipliers
+                result
             }
             Self::Pow(base, exp) => {
                 if let Func::E = **base {
@@ -103,7 +169,7 @@ impl Func {
                 if let Func::Num(exp_val) = **exp {
                     return exp_val * base.derive(var) * base.clone().powi(exp_val - 1);
                 }
-                (Func::E.pow(*base.clone() * Self::S(FType::Ln, exp.clone()))).derive(var)
+                (Func::E.pow(*exp.clone() * Self::S(FType::Ln, base.clone()))).derive(var)
             }
             Self::S(kind, argument) => {
                 let argument = Box::new(*argument.clone());
@@ -148,14 +214,82 @@ impl Func {
                     FType::Abs => arg * *argument.clone() / Func::S(FType::Abs, argument),
                 }
             }
-        }
+        };
+        res
     }
 }
 
 #[test]
 fn test_derive() {
+    use crate::{f1d, f2d, f3d, fnd};
+
     assert_eq!(
-        F1D::new("x+ln(x)+x^2+sin(2x)").unwrap().derive(1),
-        F1D::new("1+1/x+2cos(2x)+2x").unwrap()
+        f1d!("x+ln(x)+x^2+sin(2x)").derive(1),
+        f1d!("1+1/x+2cos(2x)+2x")
+    );
+
+    assert_eq!(f1d!("3x+7+e").derive(1), f1d!("3"));
+    assert_eq!(f1d!("xsin(x)").derive(1), f1d!("sin(x)+xcos(x)"));
+    assert_eq!(f1d!("tan(x^2)").derive(1), f1d!("2xsec(x^2)^2"));
+    assert_eq!(f1d!("x^x").derive(1), f1d!("(ln(x)+1)e^(xln(x))"));
+    assert_eq!(
+        f3d!("xyz^2").gradient(),
+        vec![f3d!("yz^2"), f3d!("xz^2"), f3d!("2xyz")]
+    );
+    // assert_eq!(f1d!("x/(x+1)").derive(1), f1d!("1/(x+1)^2"));
+    assert_eq!(f1d!("1/(3e*x^2)").derive(1), f1d!("-2/(3e*x^3)"));
+    assert_eq!(f1d!("cos(x)").derive(1), f1d!("-sin(x)"));
+    assert_eq!(f1d!("sin(x)").derive(1), f1d!("cos(x)"));
+    assert_eq!(f1d!("cot(x)").derive(1), f1d!("-csc(x)^2"));
+    assert_eq!(f1d!("sec(x)").derive(1), f1d!("sec(x)tan(x)"));
+    assert_eq!(f1d!("csc(x)").derive(1), f1d!("-csc(x)cot(x)"));
+    assert_eq!(f1d!("asin(x)").derive(1), f1d!("1/(1-x^2)^(1/2)"));
+    assert_eq!(f1d!("acos(x)").derive(1), f1d!("-1/(1-x^2)^(1/2)"));
+    assert_eq!(f1d!("atan(x)").derive(1), f1d!("1/(1+x^2)"));
+    assert_eq!(f1d!("sinh(x)").derive(1), f1d!("cosh(x)"));
+    assert_eq!(f1d!("cosh(x)").derive(1), f1d!("sinh(x)"));
+    assert_eq!(f1d!("tanh(x)").derive(1), f1d!("sech(x)^2"));
+    assert_eq!(f1d!("coth(x)").derive(1), f1d!("-csch(x)^2"));
+    assert_eq!(f1d!("sech(x)").derive(1), f1d!("-tanh(x)sech(x)"));
+    assert_eq!(f1d!("csch(x)").derive(1), f1d!("-csch(x)coth(x)"));
+    assert_eq!(f1d!("asinh(x)").derive(1), f1d!("1/(1+x^2)^(1/2)"));
+    assert_eq!(f1d!("acosh(x)").derive(1), f1d!("1/(x^2-1)^(1/2)"));
+    assert_eq!(f1d!("atanh(x)").derive(1), f1d!("1/(1-x^2)"));
+    assert_eq!(f1d!("abs(x)").derive(1), f1d!("x/abs(x)"));
+
+    // F2D
+    assert_eq!(f2d!("xy+y^2").gradient(), vec![f2d!("y"), f2d!("x+2y")]);
+    assert_eq!(
+        f2d!("xy+y^2").hessian(),
+        vec![vec![f2d!("0"), f2d!("1")], vec![f2d!("1"), f2d!("2")]]
+    );
+
+    // F3D
+    assert_eq!(
+        f3d!("xy+y^2+1/z").gradient(),
+        vec![f3d!("y"), f3d!("x+2y"), f3d!("-1/z^2")]
+    );
+    assert_eq!(
+        f3d!("xy+y^2+1/z").hessian(),
+        vec![
+            vec![f3d!("0"), f3d!("1"), f3d!("0")],
+            vec![f3d!("1"), f3d!("2"), f3d!("0")],
+            vec![f3d!("0"), f3d!("0"), f3d!("2/z^3")]
+        ]
+    );
+
+    // FND
+    let v = ['w', 'f'];
+    assert_eq!(
+        fnd!("w+f^2", &v).gradient(),
+        vec![fnd!("1", &v), fnd!("2f", &v)]
+    );
+
+    assert_eq!(
+        fnd!("w+f^2", &v).hessian(),
+        vec![
+            vec![fnd!("0", &v), fnd!("0", &v)],
+            vec![fnd!("0", &v), fnd!("2", &v)]
+        ]
     )
 }

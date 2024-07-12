@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{FType, Func, F1D};
+use crate::{FType, Func, F1D, F2D, F3D};
 
 impl Display for Func {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -9,7 +9,7 @@ impl Display for Func {
             Self::PI => write!(f, "\u{1D70B}"),
             Self::Var(char) => write!(f, "{}", char),
             Self::Num(num) => write!(f, "{}", num),
-            Self::Param(par) => write!(f, "[{}]", par),
+            Self::Param(par, _) => write!(f, "[{}]", par),
             Self::S(kind, arg) => match kind {
                 FType::Sin => write!(f, "sin({})", arg),
                 FType::Cos => write!(f, "cos({})", arg),
@@ -56,8 +56,23 @@ impl Display for Func {
             Self::Mul(mul) => {
                 let mut output = String::from("");
                 let mut found_div = false;
+                let mut has_divs = false;
 
-                for el in mul {
+                if mul.len() == 1 {
+                    if let Func::Pow(base, exp) = &mul[0] {
+                        if let Func::Num(e) = **exp {
+                            if e < 0 {
+                                return write!(
+                                    f,
+                                    "1/{}",
+                                    Func::Pow(base.clone(), Box::new(Func::Num(-e)))
+                                );
+                            }
+                        }
+                    }
+                }
+
+                for (i, el) in mul.iter().enumerate() {
                     if let Func::Num(val) = el {
                         if *val == -1 {
                             output += "-";
@@ -68,14 +83,21 @@ impl Display for Func {
                         if let Func::Num(e) = **exp {
                             if e < 0 {
                                 if !found_div {
-                                    output += &format!("/({}", base);
-                                } else {
-                                    output += &format!("{}", base);
+                                    output += "/";
+                                    if i != mul.len() - 1 {
+                                        has_divs = true;
+                                        output += "(";
+                                    }
                                 }
 
+                                match **base {
+                                    Func::Add(_) | Func::Mul(_) => output += &format!("({})", base),
+                                    _ => output += &format!("{}", base),
+                                };
                                 if e != -1 {
                                     output += &format!("^{}", -e);
                                 }
+
                                 found_div = true;
                                 continue;
                             }
@@ -83,11 +105,10 @@ impl Display for Func {
                     }
                     output += &format!("{}", el);
                 }
-                if found_div {
-                    write!(f, "{})", output)
-                } else {
-                    write!(f, "{}", output)
+                if has_divs {
+                    output += ")";
                 }
+                write!(f, "{}", output)
             }
             Func::Pow(base, exp) => {
                 let mut output = String::new();
@@ -107,14 +128,24 @@ impl Display for Func {
     }
 }
 
-impl<'a> Display for F1D<'a> {
+impl Display for F1D {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.func)
+        write!(f, "{}", self.0)
+    }
+}
+impl Display for F2D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl Display for F3D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
 impl Func {
-    pub fn latex(&self) -> String {
+    pub(crate) fn latex(&self) -> String {
         match self {
             Func::Var(char) => char.to_string(),
             Func::PI => String::from("\\pi"),
@@ -126,7 +157,7 @@ impl Func {
                     format!("{}", val)
                 }
             }
-            Func::Param(par) => format!("\text{{{par}}}"),
+            Func::Param(par, _) => format!("\text{{{par}}}"),
             Func::Add(add) => {
                 let mut output = String::from("");
 
@@ -171,13 +202,13 @@ impl Func {
                     Func::Add(_) | Func::Mul(_) | Func::Pow(..) => {
                         output += &format!("({})", base.latex())
                     }
-                    _ => output += &format!("{}", base.latex()),
+                    _ => output += &base.latex(),
                 };
                 match **exp {
                     Func::Add(_) | Func::Mul(_) | Func::Pow(..) => {
                         output += &format!("^{{{}}}", exp.latex())
                     }
-                    Func::Num(val) if val == 1 => (),
+                    Func::Num(1) => (),
                     _ => output += &format!("^{}", exp.latex()),
                 };
 
@@ -232,10 +263,6 @@ fn test_latex() {
         format!("{}", F3D::new("z+3ln(x)/(xy)").unwrap().latex()),
         "z+\\frac{3ln(x)}{xy}"
     );
-
-    // let ctx = Ctx::new(vec![("eta", 0.45)]);
-    // let func = F3D::build("eta^2+cos(x)-tan(x)", &ctx).unwrap();
-    // assert_eq!(func.latex(), "-tan(x)+\text{eta}^2+cos(x)");
 
     assert_eq!(F3D::new("(x+2)^3").unwrap().latex(), "(2+x)^3");
     assert_eq!(F3D::new("(x+2)^(3+y)").unwrap().latex(), "(2+x)^{3+y}");

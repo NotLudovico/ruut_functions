@@ -1,62 +1,84 @@
+#![deny(missing_docs)]
+//! Crate for creating math functions from string and perform symbolic derivation
 use parser::{builder::build, to_rpn, ParsingError};
 use simp::simp_node;
 
 mod derivation;
 mod display;
-pub mod ops;
-pub mod parser;
+mod eval;
+pub use crate::eval::{eval_vec_f1d, eval_vec_f2d, eval_vec_f3d};
+mod macros;
+mod ops;
+mod param;
+mod parser;
 mod simp;
 mod traits;
 
-#[derive(Debug, PartialEq, Clone)]
-pub(crate) struct Ctx<'a>(Vec<&'a str>);
-impl<'a> Ctx<'a> {
-    pub fn new(symbols: &'a [&str]) -> Self {
-        Ctx(symbols.to_vec())
+#[derive(Debug, PartialEq)]
+/// Representation of a 1D function
+pub struct F1D(Func);
+#[derive(Debug, PartialEq)]
+/// Representation of a 2D function
+pub struct F2D(Func);
+#[derive(Debug, PartialEq)]
+/// Representation of a 3D function
+pub struct F3D(Func);
+
+impl F1D {
+    /// Creates a new function from a str
+    pub fn new(input: &str) -> Result<Self, ParsingError> {
+        let mut func = build(to_rpn(input, &['x'])?);
+        simp_node(&mut func);
+        Ok(F1D(func))
+    }
+    /// Returns a string in latex format
+    pub fn latex(&self) -> String {
+        self.0.latex()
+    }
+}
+impl F2D {
+    /// Creates a new function from a str
+    pub fn new(input: &str) -> Result<Self, ParsingError> {
+        let mut func = build(to_rpn(input, &['x', 'y'])?);
+        simp_node(&mut func);
+        Ok(F2D(func))
+    }
+
+    /// Returns a string in latex format
+    pub fn latex(&self) -> String {
+        self.0.latex()
+    }
+}
+
+impl F3D {
+    /// Creates a new funcction from a str
+    pub fn new(input: &str) -> Result<Self, ParsingError> {
+        let mut func = build(to_rpn(input, &['x', 'y', 'z'])?);
+        simp_node(&mut func);
+        Ok(F3D(func))
+    }
+    /// Returns a string in latex format
+    pub fn latex(&self) -> String {
+        self.0.latex()
+    }
+}
+
+impl FND {
+    /// Creates a new function from a string
+    pub fn new(input: &str, vars: &[char]) -> Result<Self, ParsingError> {
+        let mut func = build(to_rpn(input, vars)?);
+        simp_node(&mut func);
+        Ok(FND {
+            vars: vars.to_vec(),
+            func,
+        })
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct F1D<'a> {
-    func: Func,
-    ctx: Ctx<'a>,
-}
-
-impl<'a> F1D<'a> {
-    pub fn new(input: &str) -> Result<Self, ParsingError> {
-        let mut func = build(to_rpn(input, &['x'])?);
-        simp_node(&mut func);
-        Ok(F1D {
-            func,
-            ctx: Ctx::new(&[]),
-        })
-    }
-}
-pub struct F2D<'a> {
-    func: Func,
-    ctx: Ctx<'a>,
-}
-pub struct F3D<'a> {
-    func: Func,
-    ctx: Ctx<'a>,
-}
-
-impl<'a> F3D<'a> {
-    pub fn new(input: &str) -> Result<Self, ParsingError> {
-        let mut func = build(to_rpn(input, &['x', 'y', 'z'])?);
-        simp_node(&mut func);
-        Ok(F3D {
-            func,
-            ctx: Ctx::new(&[]),
-        })
-    }
-    pub fn latex(&self) -> String {
-        self.func.latex()
-    }
-}
-
-pub struct FND<'a> {
-    vars: Vec<&'a str>,
+/// Representation of an n-dimensional function
+pub struct FND {
+    vars: Vec<char>,
     func: Func,
 }
 
@@ -66,7 +88,7 @@ pub(crate) enum Func {
     E,
     PI,
     Num(i32),
-    Param(String),
+    Param(String, f64),
     Add(Vec<Self>),
     Mul(Vec<Self>),
     Pow(Box<Self>, Box<Self>),

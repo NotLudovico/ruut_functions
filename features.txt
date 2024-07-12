@@ -1,12 +1,14 @@
 [x] Fix parsing with starting negative number
 [] Allow for simp of the type Sin/Cos^2 -> Tan/Cos
 [] Greek letters
-[] Sqrt operator
+[x] Sqrt operator
 [] Taylor Expansion
 [] New function from RPN syntax
 [] New function from LATEX
 [x] Allow sqrt syntax
-[] Print in latex
+[x] Print in latex
 [] Find Local Min/Max (Maybe)
 [] Fit function to points
+[x] Turn f1d into f2d ecc...
+[] Try convert from f3d to f1d...
 

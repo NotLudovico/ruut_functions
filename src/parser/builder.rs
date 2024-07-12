@@ -10,6 +10,7 @@ pub(crate) fn build(input: VecDeque<Grammar>) -> Func {
         match el {
             Grammar::Num(val) => stack.push(Func::Num(val)),
             Grammar::Var(char) => stack.push(Func::Var(char)),
+            Grammar::Param(name) => stack.push(Func::Param(name, 0.)),
             Grammar::Add => {
                 let second = stack.pop().unwrap();
 

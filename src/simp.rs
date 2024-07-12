@@ -24,6 +24,18 @@ pub(crate) fn simp_node(func: &mut Func) {
                     Box::new(*base_b.clone()),
                     Box::new(*exp_b.clone() * *exp.clone()),
                 );
+            } else if **exp == 1 {
+                *func = *base.clone();
+            } else if let Func::E = &**base {
+                // e^(log(x)^2) -> x^log(x)
+                if let Func::Pow(base_e, exp_e) = &**exp {
+                    if let Func::S(FType::Ln, arg) = &**base_e {
+                        if let Func::Num(val) = &**exp_e {
+                            *func = (arg.clone())
+                                .pow(Func::S(FType::Ln, Box::new(arg.clone().powi(val - 1))));
+                        }
+                    }
+                }
             } else {
                 simp_node(base);
                 simp_node(exp);
@@ -55,6 +67,18 @@ pub(crate) fn simp_node(func: &mut Func) {
     }
 }
 
+// Up to power
+fn has_div(mul: &[Func]) -> bool {
+    for el in mul {
+        if let Func::Pow(_, exp) = el {
+            if **exp < 0 {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn simp_add(add: &mut Vec<Func>) -> bool {
     let mut worked = false;
 
@@ -71,7 +95,8 @@ fn simp_add(add: &mut Vec<Func>) -> bool {
                 (Func::S(FType::Ln, arg1), Func::S(FType::Ln, arg2)) => {
                     Some(Func::S(FType::Ln, Box::new(*arg1.clone() * *arg2.clone())))
                 }
-                (Func::Mul(lhs), Func::Mul(rhs)) => {
+                (Func::Mul(lhs), Func::Mul(rhs)) if !has_div(lhs) && !has_div(rhs) => {
+                    // 2x+x = 3x
                     let mut lhs_c = (0, 1); // (index + 1) and value of coefficient
                     let mut rhs_c = (0, 1);
 
@@ -142,12 +167,30 @@ fn simp_mul(mul: &mut Vec<Func>) -> bool {
     for i in 0..mul.len() {
         simp_node(&mut mul[i]);
 
+        if let Func::Pow(base, _) = &mul[i] {
+            if **base == 1 {
+                mul[i] = Func::Num(1);
+            }
+        }
         let (firsts, others) = mul.split_at_mut(i + 1);
 
         for second in others.iter_mut() {
             let new_func = match (&firsts[i], &second) {
                 (Func::Num(mul1), Func::Num(mul2)) if *mul2 != 1 && *mul1 != 1 => {
                     Some(Func::Num(mul1 * mul2))
+                }
+                (Func::Num(num), Func::Pow(base, exp)) if **exp == -1 => {
+                    if let Func::Num(den) = **base {
+                        let gcd = gcd(num.unsigned_abs(), den.unsigned_abs()) as i32;
+                        if gcd != 1 {
+                            firsts[i] = Func::Num(num / gcd);
+                            *second =
+                                Func::Pow(Box::new(Func::Num(den / gcd)), Box::new(Func::Num(-1)));
+                            worked = true;
+                        }
+                    }
+
+                    None
                 }
                 (Func::S(kind, arg1), Func::S(kind2, arg2)) if arg1 == arg2 => {
                     match (kind, kind2) {
@@ -181,8 +224,15 @@ fn simp_mul(mul: &mut Vec<Func>) -> bool {
                     }
                     result
                 }
+                (Func::Pow(base1, exp1), Func::Pow(base2, exp2)) if **base1 == **base2 => {
+                    Some(base1.clone().pow(*exp1.clone() + *exp2.clone()))
+                }
                 (other, Func::Pow(base, exp)) if **exp == -1 && *other == **base => {
+                    // x/x -> 1
                     Some(Func::Num(1))
+                }
+                (other, Func::Pow(base, exp)) if *other == **base => {
+                    Some(base.clone().pow(1 + *exp.clone()))
                 }
                 (_, _) => None,
             };
@@ -269,19 +319,26 @@ fn unwrap_par(func: &mut Func) {
 
 #[test]
 fn test_simp() {
-    use crate::F1D;
+    use crate::{f1d, F1D};
+
+    assert_eq!(f1d!("6/3+3/6+e^(2-1)"), f1d!("5/2+e"));
     assert_eq!(
-        F1D::new("sin(x)/cos(x)+1/2-7+sin(x)/cos(2x)+(x^2)^3+ln(e^2)").unwrap(),
-        F1D::new("tan(x)-13/2+sin(x)/cos(2x)+x^6+2").unwrap()
+        f1d!("3x+2x+cot(x^2)sin(x^2)+cot(x)*tan(x)"),
+        f1d!("5x+1+cos(x^2)")
     );
 
     assert_eq!(
-        F1D::new("x+sin(x)/cos(-x)+ln(4x)+ln(7)+sin(x^2)^2+tan(14x)cos(14x)+3/2-1/7+cos(x)cos(x)+sin(x)sin(x)+2/28-10/7+cot(x)^2").unwrap(),
-    F1D::new("x+tan(x)+ln(28x)+sin(x^2)^2+sin(14x)+csc(x)^2").unwrap()
+        f1d!("sin(x)/cos(x)+1/2-7+sin(x)/cos(2x)+(x^2)^3+ln(e^2)"),
+        f1d!("tan(x)-13/2+sin(x)/cos(2x)+x^6+2")
     );
 
     assert_eq!(
-        F1D::new("cos(x)^2+sin(x)^2+tan(x)^2").unwrap(),
-        F1D::new("sec(x)^2").unwrap()
+        f1d!("x+sin(x)/cos(-x)+ln(4x)+ln(7)+sin(x^2)^2+tan(14x)cos(14x)+3/2-1/7+cos(x)cos(x)+sin(x)sin(x)+2/28-10/7+cot(x)^2"),
+    f1d!("x+tan(x)+ln(28x)+sin(x^2)^2+sin(14x)+csc(x)^2")
     );
+
+    assert_eq!(f1d!("cos(x)^2+sin(x)^2+tan(x)^2"), f1d!("sec(x)^2"));
+
+    assert_eq!(f1d!("e^ln(x)"), f1d!("x"));
+    assert_eq!(f1d!("e^(ln(x)^2)"), f1d!("x^ln(x)"));
 }

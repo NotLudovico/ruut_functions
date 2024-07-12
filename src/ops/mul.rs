@@ -46,8 +46,9 @@ impl MulAssign for Func {
                     return;
                 } else if *self == 1 {
                     *self = rhs.clone();
+                } else {
+                    *self = Func::Mul(vec![self.clone(), rhs]);
                 }
-                *self = Func::Mul(vec![self.clone(), rhs]);
             }
         }
 

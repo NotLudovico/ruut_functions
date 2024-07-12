@@ -1,4 +1,4 @@
-use crate::{FType, Func};
+use crate::{FType, Func, F1D, F2D, F3D};
 
 impl PartialEq<i32> for Func {
     fn eq(&self, other: &i32) -> bool {
@@ -12,7 +12,7 @@ impl PartialEq<i32> for Func {
 impl PartialOrd<i32> for Func {
     fn partial_cmp(&self, other: &i32) -> Option<std::cmp::Ordering> {
         if let Func::Num(val) = self {
-            Some(val.cmp(&other))
+            Some(val.cmp(other))
         } else {
             None
         }
@@ -33,7 +33,7 @@ impl Ord for Func {
                     if e1 != e2 {
                         return e2.cmp(&e1);
                     } else {
-                        return base1.cmp(&base2);
+                        return base1.cmp(base2);
                     }
                 }
             }
@@ -48,7 +48,7 @@ fn func_order(func: &Func) -> u32 {
         Func::Num(_) => 0,
         Func::PI => 1,
         Func::E => 2,
-        Func::Param(_) => 3,
+        Func::Param(..) => 3,
         Func::Var(char) => char.to_ascii_lowercase() as u32,
         Func::Mul(_) => 123,
         Func::Add(_) => 124,
@@ -97,5 +97,21 @@ impl std::iter::Sum for Func {
 impl std::iter::Product for Func {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Func::Num(1), |acc, func| acc * func)
+    }
+}
+
+impl From<F1D> for F3D {
+    fn from(value: F1D) -> Self {
+        F3D(value.0)
+    }
+}
+impl From<F2D> for F3D {
+    fn from(value: F2D) -> Self {
+        F3D(value.0)
+    }
+}
+impl From<F1D> for F2D {
+    fn from(value: F1D) -> Self {
+        F2D(value.0)
     }
 }

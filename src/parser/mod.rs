@@ -16,6 +16,7 @@ pub(crate) enum Grammar {
     PI,
     LPar,
     Num(i32),
+    Param(String),
     S(FType),
     Sqrt,
 }
@@ -26,6 +27,7 @@ pub(crate) fn to_rpn(input: &str, vars: &[char]) -> Result<VecDeque<Grammar>, Pa
     let mut output_queue: VecDeque<Grammar> = VecDeque::new();
     let mut operator_stack: Vec<Grammar> = Vec::new();
     let mut prev = None;
+    let mut found_param = false;
 
     while let Some(char) = chars.next() {
         if char == ' ' {
@@ -51,12 +53,19 @@ pub(crate) fn to_rpn(input: &str, vars: &[char]) -> Result<VecDeque<Grammar>, Pa
             output_queue.push_back(Grammar::PI);
             implicit_mul(&next, &mut operator_stack, &mut output_queue);
             curr.clear();
+        } else if curr == "[" {
+            found_param = true;
+        } else if char == ']' {
+            output_queue.push_back(Grammar::Param(curr[1..(curr.len() - 1)].to_string()));
+            found_param = false;
+            curr.clear();
         } else if curr.len() == 1 && vars.contains(&curr.chars().next().unwrap()) {
             output_queue.push_back(Grammar::Var(char));
             curr.clear();
             implicit_mul(&next, &mut operator_stack, &mut output_queue);
-        } else if match_operator(char, &next, &prev, &mut operator_stack, &mut output_queue)?
-            || match_func(&curr, &next, &mut operator_stack)?
+        } else if !found_param
+            && (match_operator(char, &next, &prev, &mut operator_stack, &mut output_queue)?
+                || match_func(&curr, &next, &mut operator_stack)?)
         {
             curr.clear();
         }
@@ -166,7 +175,7 @@ fn match_operator(
     }
     operator_stack.push(o1);
 
-    return Ok(true);
+    Ok(true)
 }
 
 fn match_func(
@@ -274,12 +283,14 @@ fn test_to_rpn() {
 
     // Implicit multiplication
     assert_eq!(
-        to_rpn("x(x+1)", &['x']).unwrap(),
+        to_rpn("x(x+1)[par]", &['x']).unwrap(),
         VecDeque::from([
             Grammar::Var('x'),
             Grammar::Var('x'),
             Grammar::Num(1),
             Grammar::Add,
+            Grammar::Mul,
+            Grammar::Param(String::from("par")),
             Grammar::Mul
         ])
     );
