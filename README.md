@@ -3,6 +3,9 @@
 - Set params and assign values (default is 0.0) 
 - Compute derivatives of any orders, gradients, hessian
 - F1D can be numerically integrated
+- Supports the following functions:
+    - Ln, Sin, Cos, Tan, Sec, Csc, ASin, ACos, ATan, Sinh, Cosh, Tanh, Coth, Sech, Csch, ASinh, ACosh, ATanh, Abs
+- Some kind of expression semplification
 
 # Examples
 ```rust
