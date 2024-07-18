@@ -2,7 +2,8 @@
 name = "ruut_functions"
 version = "0.2.0"
 edition = "2021"
-
+description = "A crate to parse math functions from string (1D,2D,3D,ND) and perform symbolic derivation, gradient, hessian"
+licence = "MIT"
 [dev-dependencies]
 criterion = "0.5.1"
 
