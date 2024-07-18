@@ -27,5 +27,9 @@ fn main() {
             vec![f3d!("0"), f3d!("0"), f3d!("0")]
         ]
     )
+
+
+    let f = f1d!("abs(x)+sin(x)");
+    assert_eq!(f.eval(-2),2.90929742683)
 }
 ```
