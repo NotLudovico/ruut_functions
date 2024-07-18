@@ -90,6 +90,11 @@ impl F3D {
 
 impl FND {
     /// Computes the nth-derivative wrt a variable
+    /// ```
+    /// use ruut_functions::{fnd,FND};
+    /// let vars = ['f', 'z'];
+    /// assert_eq!(fnd!("f^2+z", &vars).derive('f', 1), fnd!("2f", &vars));
+    /// ```
     pub fn derive(&self, var: char, order: usize) -> Self {
         FND {
             vars: self.vars.clone(),
@@ -98,6 +103,11 @@ impl FND {
     }
 
     /// Computes the gradient
+    /// ```
+    /// use ruut_functions::{fnd,FND};
+    /// let vars = ['f', 'z'];
+    /// assert_eq!(fnd!("f^2+z", &vars).gradient(), vec![fnd!("2f", &vars), fnd!("1", &vars)]);
+    /// ```
     pub fn gradient(&self) -> Vec<Self> {
         let mut result = Vec::with_capacity(self.vars.len());
         for var in &self.vars {
@@ -106,6 +116,12 @@ impl FND {
         result
     }
     /// Computes the hessian
+    /// ```
+    /// use ruut_functions::{fnd,FND};
+    /// let vars = ['f', 'z'];
+    /// assert_eq!(fnd!("f^3+zf", &vars).hessian(), vec![vec![fnd!("6f", &vars), fnd!("1", &vars)],
+    ///                                                  vec![fnd!("1", &vars), fnd!("0", &vars)]]);
+    /// ```
     pub fn hessian(&self) -> Vec<Vec<Self>> {
         let mut result = Vec::new();
 

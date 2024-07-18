@@ -66,3 +66,20 @@ impl F3D {
         self.0.set_par(name, val)
     }
 }
+
+#[test]
+fn test_param() {
+    use crate::{f1d, f2d, f3d};
+    let mut f = f1d!("[a]^2+x[a]+ln([a])");
+    f.set_par("a", 6.);
+    assert!(f.eval(0.) - 37.791 < 0.001);
+
+    let mut f = f2d!("e^(-[eta]xy)");
+    f.set_par("a", 12.);
+    assert_eq!(f.eval(1., 1.), 1.);
+    f.set_par("eta", 0.5);
+    assert!(f.eval(1., 1.) - 0.60653 < 0.00001);
+
+    let mut f = f3d!("sin(xyz[b])");
+    f.set_par("b", 1.);
+}

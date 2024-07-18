@@ -58,6 +58,7 @@ pub(crate) fn to_rpn(input: &str, vars: &[char]) -> Result<VecDeque<Grammar>, Pa
         } else if char == ']' {
             output_queue.push_back(Grammar::Param(curr[1..(curr.len() - 1)].to_string()));
             found_param = false;
+            implicit_mul(&next, &mut operator_stack, &mut output_queue);
             curr.clear();
         } else if curr.len() == 1 && vars.contains(&curr.chars().next().unwrap()) {
             output_queue.push_back(Grammar::Var(char));
@@ -305,4 +306,20 @@ fn test_to_rpn() {
             &['x'],
         ).unwrap()
     );
+
+    // Power problem
+    assert_eq!(
+        to_rpn("e^(-[eta]xy)", &['x', 'y']).unwrap(),
+        VecDeque::from([
+            Grammar::E,
+            Grammar::Num(-1),
+            Grammar::Param(String::from("eta")),
+            Grammar::Mul,
+            Grammar::Var('x'),
+            Grammar::Mul,
+            Grammar::Var('y'),
+            Grammar::Mul,
+            Grammar::Pow
+        ])
+    )
 }

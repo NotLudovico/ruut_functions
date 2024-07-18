@@ -58,20 +58,6 @@ impl Display for Func {
                 let mut found_div = false;
                 let mut has_divs = false;
 
-                if mul.len() == 1 {
-                    if let Func::Pow(base, exp) = &mul[0] {
-                        if let Func::Num(e) = **exp {
-                            if e < 0 {
-                                return write!(
-                                    f,
-                                    "1/{}",
-                                    Func::Pow(base.clone(), Box::new(Func::Num(-e)))
-                                );
-                            }
-                        }
-                    }
-                }
-
                 for (i, el) in mul.iter().enumerate() {
                     if let Func::Num(val) = el {
                         if *val == -1 {
@@ -148,22 +134,26 @@ impl Func {
     pub(crate) fn latex(&self) -> String {
         match self {
             Func::Var(char) => char.to_string(),
-            Func::PI => String::from("\\pi"),
+            Func::PI => String::from(r"\pi"),
             Func::E => String::from("e"),
-            Func::Num(val) => {
-                if *val == -1 {
-                    "-".to_string()
-                } else {
-                    format!("{}", val)
-                }
-            }
-            Func::Param(par, _) => format!("\text{{{par}}}"),
+            Func::Num(val) => format!("{}", val),
+            Func::Param(par, _) => format!(r"\text{{{par}}}"),
             Func::Add(add) => {
                 let mut output = String::from("");
 
                 for (i, el) in add.iter().enumerate() {
                     if i != 0 {
-                        output += &format!("+{}", &el.latex());
+                        if let Func::Mul(mul) = el {
+                            if !mul.is_empty() {
+                                if let Func::Num(val) = mul[0] {
+                                    if val < 0 {
+                                        output += &format!("{}", el);
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        output += &format!("+{}", el.latex());
                     } else {
                         output += &el.latex();
                     }
@@ -178,7 +168,7 @@ impl Func {
                     if let Func::Pow(base, exp) = el {
                         if **exp < 0 {
                             if !found_div {
-                                output = format!("\\frac{{{}}}{{", output);
+                                output = format!(r"\frac{{{}}}{{", output);
                             }
                             found_div = true;
                             let div = Func::Pow(base.clone(), Box::new(-1 * *exp.clone()));
@@ -242,29 +232,71 @@ impl Func {
 
 #[test]
 fn test_display() {
+    use crate::{f1d, f2d, f3d};
+    assert_eq!(
+        format!("{}", f1d!("x+1+cos(x)/ln(x)/ln(15)*sinh(x)^2/7-2+e*pi")),
+        "-1+x+cos(x)sinh(x)^2/(7ln(x)ln(15))+𝜋e",
+    );
+
+    assert_eq!(
+        format!("{}", f1d!("[eta]*sin(x)+cosh(x)/tan(x^2)")),
+        "[eta]sin(x)+cosh(x)/tan(x^2)"
+    );
+    assert_eq!(
+        format!("{}", f1d!("cot(x)+sec(x)^2+csc(e)/acos(x)")),
+        "csc(e)/acos(x)+cot(x)+sec(x)^2"
+    );
+
+    assert_eq!(format!("{}", f2d!("x+(-5y)")), "x-5y");
+    assert_eq!(format!("{}", f2d!("-xy")), "-xy");
+    assert_eq!(format!("{}", f2d!("x/(x+y)^2")), "x/(x+y)^2");
+    assert_eq!(format!("{}", f2d!("(x+y)^(e+2)")), "(x+y)^(2+e)");
     assert_eq!(
         format!(
             "{}",
-            F1D::new("x+1+cos(x)/ln(x)/ln(15)*sinh(x)^2/7-2").unwrap()
+            f2d!(
+                "asin(x)+atan(x)+tanh(x)+coth(x)+sech(x)+csch(x)+asinh(x)+acosh(x)+atanh(x)+abs(x)"
+            )
         ),
-        "-1+x+cos(x)sinh(x)^2/(7ln(x)ln(15))",
-    )
+        "|x|+asin(x)+atan(x)+tanh(x)+coth(x)+sech(x)+csch(x)+asinh(x)+acosh(x)+atanh(x)"
+    );
+    assert_eq!(format!("{}", f3d!("xyz")), "xyz");
 }
 
 #[test]
 fn test_latex() {
-    use crate::F3D;
+    use crate::{f1d, f2d, f3d};
+
     assert_eq!(
-        format!("{}", F3D::new("x^(y^3)+sin(x)+e+pi").unwrap().latex()),
-        "\\pi+e+sin(x)+x^{y^3}"
+        format!("{}", f3d!("x^(y^3)+sin(x)+e+pi").latex()),
+        r"\pi+e+sin(x)+x^{y^3}"
     );
 
     assert_eq!(
-        format!("{}", F3D::new("z+3ln(x)/(xy)").unwrap().latex()),
-        "z+\\frac{3ln(x)}{xy}"
+        format!("{}", f3d!("z+3ln(x)/(xy)").latex()),
+        r"z+\frac{3ln(x)}{xy}"
     );
 
-    assert_eq!(F3D::new("(x+2)^3").unwrap().latex(), "(2+x)^3");
-    assert_eq!(F3D::new("(x+2)^(3+y)").unwrap().latex(), "(2+x)^{3+y}");
-    assert_eq!(F3D::new("x^(3+y)").unwrap().latex(), "x^{3+y}");
+    assert_eq!(f3d!("(x+2)^3").latex(), "(2+x)^3");
+    assert_eq!(f3d!("(x+2)^(3+y)").latex(), "(2+x)^{3+y}");
+    assert_eq!(f3d!("x^(3+y)").latex(), "x^{3+y}");
+    assert_eq!(f3d!("-x+[eta]").latex(), r"\text{eta}-x");
+    assert_eq!(
+        format!(
+            "{}",
+            f2d!(
+                "asin(x)+atan(x)+tanh(x)+coth(x)+sech(x)+csch(x)+asinh(x)+acosh(x)+atanh(x)+abs(x)"
+            )
+            .latex()
+        ),
+        "|x|+asin(x)+atan(x)+tanh(x)+coth(x)+sech(x)+csch(x)+asinh(x)+acosh(x)+atanh(x)"
+    );
+
+    assert_eq!(
+        format!(
+            "{}",
+            f1d!("cot(x)+sec(x)^2+csc(e)/acos(x)+cos(x)+tan(x)+sinh(x)cosh(x)").latex()
+        ),
+        r"\frac{csc(e)}{acos(x)}+sinh(x)cosh(x)+cos(x)+tan(x)+cot(x)+sec(x)^2"
+    );
 }

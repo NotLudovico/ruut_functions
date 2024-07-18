@@ -1,6 +1,4 @@
-use ruut_algebra::gcd;
-
-use crate::{FType, Func};
+use crate::{gcd, FType, Func};
 
 pub(crate) fn simp_node(func: &mut Func) {
     unwrap_par(func);

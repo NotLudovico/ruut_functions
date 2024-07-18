@@ -85,4 +85,17 @@ fn test_builder() {
             ])
         ])
     );
+
+    assert_eq!(
+        build(to_rpn("e^(-[eta]xy)", &['x', 'y']).unwrap()),
+        Func::Pow(
+            Box::new(Func::E),
+            Box::new(Func::Mul(vec![
+                Func::Num(-1),
+                Func::Param("eta".to_string(), 0.),
+                Func::Var('x'),
+                Func::Var('y')
+            ]))
+        )
+    )
 }

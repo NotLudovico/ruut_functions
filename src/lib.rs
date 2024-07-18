@@ -6,6 +6,7 @@ use simp::simp_node;
 mod derivation;
 mod display;
 mod eval;
+mod integration;
 pub use crate::eval::{eval_vec_f1d, eval_vec_f2d, eval_vec_f3d};
 mod macros;
 mod ops;
@@ -117,4 +118,18 @@ pub(crate) enum FType {
     ATanh,
     Abs,
     Ln,
+}
+
+pub(crate) fn gcd(mut n: u32, mut m: u32) -> u32 {
+    assert!(n != 0 && m != 0);
+    if n == 0 {
+        std::mem::swap(&mut n, &mut m);
+    }
+    while m != 0 {
+        if m < n {
+            std::mem::swap(&mut m, &mut n);
+        }
+        m %= n;
+    }
+    n
 }
