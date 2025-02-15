@@ -4,6 +4,7 @@ version = "0.2.1"
 edition = "2021"
 description = "A crate to parse math functions from string (1D,2D,3D,ND) and perform symbolic derivation, gradient, hessian"
 license = "MIT"
+keywords=["math", "symbolic", "functions", "derivation"]
 
 [dev-dependencies]
 criterion = "0.5.1"

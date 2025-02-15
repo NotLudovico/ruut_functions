@@ -1,4 +1,5 @@
 use crate::{FType, Func, F1D, F2D, F3D, FND};
+use std::f64;
 
 impl F1D {
     /// Evaluates function at x
@@ -113,12 +114,12 @@ fn test_eval() {
             2.,
             1.
         ),
-        vec![0.7307375514178355, 1.5707963267948966]
+        vec![0.7307375514178355, f64::consts::FRAC_PI_2]
     );
 
     assert_eq!(
         eval_vec_f3d(
-            &vec![
+            &[
                 f3d!("atan(x)+sinh(y)+cosh(z)+tanh(xy)"),
                 f3d!("coth(x)+sech(y)+csch(z)+asinh(x)+acosh(x)+atanh(y)+abs(x)")
             ],

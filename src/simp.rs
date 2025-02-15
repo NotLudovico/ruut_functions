@@ -207,17 +207,31 @@ fn simp_mul(mul: &mut Vec<Func>) -> bool {
                         (_, _) => None,
                     }
                 }
-                (Func::S(kind, arg1), Func::Pow(base, exp)) if **exp == -1 => {
+                (Func::S(kind, arg1), Func::Pow(base, exp)) if **exp <= -1 => {
                     let mut result = None;
-                    if let Func::S(kind2, arg2) = &**base {
-                        if arg1 == arg2 {
-                            result = match (kind, kind2) {
-                                (FType::Sin, FType::Cos) => Some(Func::S(FType::Tan, arg1.clone())),
-                                (FType::Cos, FType::Sin) => Some(Func::S(FType::Cot, arg1.clone())),
-                                (FType::Tan, FType::Sin) => Some(Func::S(FType::Sec, arg1.clone())),
-                                (FType::Cot, FType::Cos) => Some(Func::S(FType::Csc, arg1.clone())),
-                                (_, _) => None,
-                            };
+                    if let Func::Num(exp) = **exp {
+                        if let Func::S(kind2, arg2) = &**base {
+                            if arg1 == arg2 {
+                                result = match (kind, kind2) {
+                                    (FType::Sin, FType::Cos) => Some(
+                                        Func::S(FType::Tan, arg1.clone())
+                                            * base.clone().powi(exp + 1),
+                                    ),
+                                    (FType::Cos, FType::Sin) => Some(
+                                        Func::S(FType::Cot, arg1.clone())
+                                            * base.clone().powi(exp + 1),
+                                    ),
+                                    (FType::Tan, FType::Sin) => Some(
+                                        Func::S(FType::Sec, arg1.clone())
+                                            * base.clone().powi(exp + 1),
+                                    ),
+                                    (FType::Cot, FType::Cos) => Some(
+                                        Func::S(FType::Csc, arg1.clone())
+                                            * base.clone().powi(exp + 1),
+                                    ),
+                                    (_, _) => None,
+                                };
+                            }
                         }
                     }
                     result
@@ -339,4 +353,6 @@ fn test_simp() {
 
     assert_eq!(f1d!("e^ln(x)"), f1d!("x"));
     assert_eq!(f1d!("e^(ln(x)^2)"), f1d!("x^ln(x)"));
+
+    assert_eq!(f1d!("sin(x)/cos(x)^2"), f1d!("tan(x)/cos(x)"))
 }
