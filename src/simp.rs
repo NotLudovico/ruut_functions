@@ -1,3 +1,5 @@
+use std::iter::OnceWith;
+
 use crate::{gcd, FType, Func};
 
 pub(crate) fn simp_node(func: &mut Func) {
@@ -177,19 +179,6 @@ fn simp_mul(mul: &mut Vec<Func>) -> bool {
                 (Func::Num(mul1), Func::Num(mul2)) if *mul2 != 1 && *mul1 != 1 => {
                     Some(Func::Num(mul1 * mul2))
                 }
-                (Func::Num(num), Func::Pow(base, exp)) if **exp == -1 => {
-                    if let Func::Num(den) = **base {
-                        let gcd = gcd(num.unsigned_abs(), den.unsigned_abs()) as i32;
-                        if gcd != 1 {
-                            firsts[i] = Func::Num(num / gcd);
-                            *second =
-                                Func::Pow(Box::new(Func::Num(den / gcd)), Box::new(Func::Num(-1)));
-                            worked = true;
-                        }
-                    }
-
-                    None
-                }
                 (Func::S(kind, arg1), Func::S(kind2, arg2)) if arg1 == arg2 => {
                     match (kind, kind2) {
                         (FType::Tan, FType::Cos) | (FType::Cos, FType::Tan) => {
@@ -207,7 +196,7 @@ fn simp_mul(mul: &mut Vec<Func>) -> bool {
                         (_, _) => None,
                     }
                 }
-                (Func::S(kind, arg1), Func::Pow(base, exp)) if **exp <= -1 => {
+                (Func::S(kind, arg1), Func::Pow(base, exp)) => {
                     let mut result = None;
                     if let Func::Num(exp) = **exp {
                         if let Func::S(kind2, arg2) = &**base {
@@ -239,6 +228,16 @@ fn simp_mul(mul: &mut Vec<Func>) -> bool {
                 (Func::Pow(base1, exp1), Func::Pow(base2, exp2)) if **base1 == **base2 => {
                     Some(base1.clone().pow(*exp1.clone() + *exp2.clone()))
                 }
+                // (Func::Pow(base1, exp1), Func::Pow(base2, exp2)) => {
+                //     if let Func::S(type1, arg1) = &**base1 {
+                //         if let Func::S(type2, arg2) = &**base2 {
+                //             if **arg1 == **arg2 {
+                //                 match (type1, typ2)
+                //             }
+                //         }
+                //     }
+                //     None
+                // }
                 (other, Func::Pow(base, exp)) if **exp == -1 && *other == **base => {
                     // x/x -> 1
                     Some(Func::Num(1))
@@ -354,5 +353,6 @@ fn test_simp() {
     assert_eq!(f1d!("e^ln(x)"), f1d!("x"));
     assert_eq!(f1d!("e^(ln(x)^2)"), f1d!("x^ln(x)"));
 
-    assert_eq!(f1d!("sin(x)/cos(x)^2"), f1d!("tan(x)/cos(x)"))
+    assert_eq!(f1d!("sin(x)/cos(x)^2"), f1d!("tan(x)/cos(x)"));
+    assert_eq!(f1d!("sin(x)^2/cos(x)^2"), f1d!("tan(x)^2"))
 }
